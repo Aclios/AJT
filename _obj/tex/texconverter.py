@@ -19,23 +19,6 @@ tex_block_dict = {
 "BC1_UNORM":8
 }
 
-tex_files_steam_format_dict = {}
-tex_files_switch_format_dict = {}
-
-with open(os.path.join('_obj','tex','tex_format_steam.txt'),'r') as f:
-    lines = f.readlines()
-for line in lines:
-    if '=' in line:
-        filepath,format,mipmap_count = line.replace(' ','').replace('\x0d\x0a','').split('=')
-        tex_files_steam_format_dict[filepath] = (format,mipmap_count)
-
-with open(os.path.join('_obj','tex','tex_format_switch.txt'),'r') as f:
-    lines = f.readlines()
-for line in lines:
-    if '=' in line:
-        filepath,format,mipmap_count = line.replace(' ','').replace('\x0d\x0a','').split('=')
-        tex_files_switch_format_dict[filepath] = (format,mipmap_count)
-
 def readint32(file):
     return int.from_bytes(file.read(4),'little')
 
@@ -181,33 +164,32 @@ class AJTTex:
 
     def import_png_switch(self,png_path,patch_root_dir): #extremely unefficient way to convert and swizzle images, but since I need to rely on an external exe to convert png to dds...
         gamepath = os.path.join(self.filepath.replace(patch_root_dir + '\\',''))
-        dds_format, mipmap_count = tex_files_switch_format_dict[gamepath]
         unswizzled_im = Image.open(png_path)
         if unswizzled_im.size[0] != self.width: #Steam images can be larger
             unswizzled_im = unswizzled_im.crop((0,0,self.width,self.height))
-        im = ImageSwizzle(unswizzled_im,dds_format)
+        im = ImageSwizzle(unswizzled_im,self.format)
         swizzled_im = im.swizzle()
         png_sizzled_path = png_path + '_sizzled.png'
         swizzled_im.save(png_sizzled_path)
         dds_sizzled_path = png_path + '_sizzled.dds'
-        check_call(['texconv','-ft','dds','-y','-f',dds_format,'-m','1','-o',os.path.dirname(png_sizzled_path),png_sizzled_path],stdout = DEVNULL)
+        check_call(['texconv','-ft','dds','-y','-f',self.format,'-m','1','-o',os.path.dirname(png_sizzled_path),png_sizzled_path],stdout = DEVNULL)
         ddsf = DDS(dds_sizzled_path)
         self.data = ddsf.data
         data_size = ddsf.pitch
-        for i in range(int(mipmap_count) - 1): #adding mipmaps manually because they need to be sizzled separately.
+        for i in range(self.mipmap_count - 1): #adding mipmaps manually because they need to be sizzled separately.
             im = Image.open(png_path)
             downsized_im = im.reduce(2*(i+1))
-            im = ImageSwizzle(downsized_im,dds_format)
+            im = ImageSwizzle(downsized_im,self.format)
             swizzled_downsized_im = im.swizzle()
             pnglittle_sizzled_path = png_path[:-3] + f'little.png' + '_sizzled.png'
             swizzled_downsized_im.save(pnglittle_sizzled_path)
             ddslittle_sizzled_path = png_path[:-3] + f'little.png' + '_sizzled.dds'
-            check_call(['texconv','-ft','dds','-y','-srgb','-f',dds_format,'-m','1','-o',os.path.dirname(pnglittle_sizzled_path),pnglittle_sizzled_path],stdout = DEVNULL)
+            check_call(['texconv','-ft','dds','-y','-srgb','-f',self.format,'-m','1','-o',os.path.dirname(pnglittle_sizzled_path),pnglittle_sizzled_path],stdout = DEVNULL)
             little_dds = DDS(ddslittle_sizzled_path)
             self.data += little_dds.data
             os.remove(pnglittle_sizzled_path)
             os.remove(ddslittle_sizzled_path)
-        for i in range(int(mipmap_count)):
+        for i in range(self.mipmap_count):
             self.mipmap_header_list[i].data_size = data_size // (4**i)
             self.mipmap_header_list[i].effective_data_size = data_size // (4**i)
             if i > 0:
@@ -217,10 +199,9 @@ class AJTTex:
 
     def import_png_steam(self,png_path,patch_root_dir):
         gamepath = os.path.join(self.filepath.replace(patch_root_dir + '\\',''))
-        dds_format, mipmap_count = tex_files_steam_format_dict[gamepath]
         if self.format in ['BC1_UNORM','BC7_UNORM']: #converting to DDS by calling texconv
             dds_path = png_path[:-3] + 'dds'
-            check_call(['texconv','-ft','dds','-y','-srgb','-f',dds_format,'-m',mipmap_count,'-o',os.path.dirname(png_path),png_path],stdout = DEVNULL)
+            check_call(['texconv','-ft','dds','-y','-srgb','-f',self.format,'-m',self.mipmap_count,'-o',os.path.dirname(png_path),png_path],stdout = DEVNULL)
             ddsf = DDS(dds_path)
             self.data = ddsf.data
             os.remove(dds_path)
