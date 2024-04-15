@@ -181,7 +181,7 @@ def batch_export_user2(extracted_root_dir,platform,ext):
                 os.makedirs(os.path.join('script',dir))
             except:
                 pass
-            output_path = os.path.join('script',dir,file.replace(f'user.2.{ext}','txt'))
+            output_path = os.path.join('script',dir,file + '.txt')
             print(f"Converting {truepath}...")
             user2 = User2File(truepath)
             user2.write_txt(output_path)
@@ -204,6 +204,6 @@ def batch_import_user2(patch_dir,platform,ext):
                 continue
             print(f'Converting {file}...')
             usr = User2File(os.path.join(txt_dir,file))
-            usr.write_user2(os.path.join(user2_dir, file.replace('txt',f'user.2.{ext}')))
+            usr.write_user2(os.path.join(user2_dir, file[:-4]))
 
 
