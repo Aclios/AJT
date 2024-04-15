@@ -22,8 +22,8 @@ with open('path_init.txt','rb') as f:
 
 STEAM_PAK_PATH, SWITCH_PAK_PATH, STEAM_PATCH_PATH, SWITCH_PATCH_PATH, EXTENSION, STEAM_MOD_DIR, SWITCH_MOD_DIR = path_L
 
-if EXTENSION not in ['fr','en','de','zhcn','zhtw']:
-    raise Exception("Error must have one of the following values: ['ja','fr','en','de','zhcn','zhtw']")
+if EXTENSION not in ['ja','fr','en','de','zhcn','zhtw','ko']:
+    raise Exception("Extension must have one of the following values: ['ja','fr','en','de','ko','zhcn','zhtw']")
 
 def main():
     args = sys.argv
@@ -79,6 +79,7 @@ def main():
                 batch_import_srcd(STEAM_PAK_PATH,STEAM_PATCH_PATH,'Steam',EXTENSION)
             elif '-nsw' in args:
                 batch_import_srcd(SWITCH_PAK_PATH,SWITCH_PATCH_PATH,'Switch',EXTENSION)
+        print('\n\n-- Building .pak --\n\n')
         if '-stm' in args:
             try:#retool return an error after building pak
                 check_call(['retool','-c',STEAM_PATCH_PATH])
