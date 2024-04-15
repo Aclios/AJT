@@ -4,6 +4,8 @@ from PIL import Image
 from subprocess import DEVNULL, STDOUT, check_call
 from _obj.tex.switch_swizzle import *
 
+
+#all the texture format that exist in AJT, but only BC1_UNORM, BC7_UNORM and RGBA8888 are used for assets, the other one are used on stuff like shaders RE Engine files
 tex_format_dict = {
 0x47:"BC1_UNORM",
 0x48:"BC1_UNORM_SRGB",
@@ -14,7 +16,7 @@ tex_format_dict = {
 0x1c:"RGBA8888_UNORM"
 }
 
-tex_block_dict = {
+bits_per_pixel_dict = {
 "BC7_UNORM":16,
 "BC1_UNORM":8
 }
@@ -32,7 +34,7 @@ def writeint32(file,value):
     file.write(value.to_bytes(4,'little'))
 
 
-class DDS:
+class DDS: #simple DDS reading to get pixel data
     def __init__(self,dds_filepath):
         with open(dds_filepath,mode='rb') as f:
             self.magic = f.read(4)
@@ -86,12 +88,12 @@ class AJTTex:
             if platform == 'Switch':
                 self.data_size = self.mipmap_header_list[0].effective_data_size
 
-    def compute_width_from_pitch(self):
-        block = tex_block_dict[self.format]
+    def compute_width_from_pitch(self): #on Steam, tex can be wider than the header width. It's possible to compute the real width from the "pitch"
+        block = bits_per_pixel_dict[self.format]
         return int(((4 * self.mipmap_header_list[0].pitch) / block))
 
     def convert_BC_to_png(self,output_dir):
-        dds_filepath = os.path.join(output_dir,self.filename.split('.')[0] + '.dds')
+        dds_filepath = os.path.join(output_dir,self.filename + '.dds')
         with open(dds_filepath,mode='wb') as f:
             f.write(b'DDS ')
             writeint32(f,124)
@@ -146,7 +148,7 @@ class AJTTex:
             print(f"Ignoring {self.filename}, format {self.format} isn't supported")
 
     def convert_RGBA_to_png(self,output_dir):
-        png_filepath = os.path.join(output_dir,self.filename.split('.')[0] + '.png')
+        png_filepath = os.path.join(output_dir,self.filename + '.png')
         extended_width, extended_height = self.width,self.height
         if self.platform == 'Switch':
             if self.height % 128 != 0:
@@ -165,43 +167,52 @@ class AJTTex:
     def import_png_switch(self,png_path,patch_root_dir): #extremely unefficient way to convert and swizzle images, but since I need to rely on an external exe to convert png to dds...
         gamepath = os.path.join(self.filepath.replace(patch_root_dir + '\\',''))
         unswizzled_im = Image.open(png_path)
-        if unswizzled_im.size[0] != self.width: #Steam images can be larger
+        if unswizzled_im.size[0] != self.width: #Steam images can be larger than Switch images (black stripes)
             unswizzled_im = unswizzled_im.crop((0,0,self.width,self.height))
         im = ImageSwizzle(unswizzled_im,self.format)
         swizzled_im = im.swizzle()
-        png_sizzled_path = png_path + '_sizzled.png'
-        swizzled_im.save(png_sizzled_path)
-        dds_sizzled_path = png_path + '_sizzled.dds'
-        check_call(['texconv','-ft','dds','-y','-f',self.format,'-m','1','-o',os.path.dirname(png_sizzled_path),png_sizzled_path],stdout = DEVNULL)
-        ddsf = DDS(dds_sizzled_path)
-        self.data = ddsf.data
-        data_size = ddsf.pitch
-        for i in range(self.mipmap_count - 1): #adding mipmaps manually because they need to be sizzled separately.
-            im = Image.open(png_path)
-            downsized_im = im.reduce(2*(i+1))
-            im = ImageSwizzle(downsized_im,self.format)
-            swizzled_downsized_im = im.swizzle()
-            pnglittle_sizzled_path = png_path[:-3] + f'little.png' + '_sizzled.png'
-            swizzled_downsized_im.save(pnglittle_sizzled_path)
-            ddslittle_sizzled_path = png_path[:-3] + f'little.png' + '_sizzled.dds'
-            check_call(['texconv','-ft','dds','-y','-srgb','-f',self.format,'-m','1','-o',os.path.dirname(pnglittle_sizzled_path),pnglittle_sizzled_path],stdout = DEVNULL)
-            little_dds = DDS(ddslittle_sizzled_path)
-            self.data += little_dds.data
-            os.remove(pnglittle_sizzled_path)
-            os.remove(ddslittle_sizzled_path)
-        for i in range(self.mipmap_count):
-            self.mipmap_header_list[i].data_size = data_size // (4**i)
-            self.mipmap_header_list[i].effective_data_size = data_size // (4**i)
-            if i > 0:
-                self.mipmap_header_list[i].data_offset = self.mipmap_header_list[i-1].data_offset + self.mipmap_header_list[i-1].effective_data_size
-        os.remove(png_sizzled_path)
-        os.remove(dds_sizzled_path)
+        png_swizzled_path = png_path + '_swizzled.png'
+        swizzled_im.save(png_swizzled_path)
+        if self.format in ["BC1_UNORM","BC7_UNORM"]:
+            dds_swizzled_path = png_path + '_swizzled.dds'
+            check_call(['texconv','-srgb','-ft','dds','-y','-f',self.format,'-m','1','-o',os.path.dirname(png_swizzled_path),png_swizzled_path],stdout = DEVNULL)
+            ddsf = DDS(dds_swizzled_path)
+            self.data = ddsf.data
+            data_size = ddsf.pitch
+            for i in range(self.mipmap_count - 1): #adding mipmaps manually because they need to be swizzled separately.
+                im = Image.open(png_path)
+                downsized_im = im.reduce(2*(i+1))
+                im = ImageSwizzle(downsized_im,self.format)
+                swizzled_downsized_im = im.swizzle()
+                pnglittle_swizzled_path = png_path[:-3] + f'little.png' + '_swizzled.png'
+                swizzled_downsized_im.save(pnglittle_swizzled_path)
+                ddslittle_swizzled_path = png_path[:-3] + f'little.png' + '_swizzled.dds'
+                check_call(['texconv','-ft','dds','-y','-srgb','-f',self.format,'-m','1','-o',os.path.dirname(pnglittle_swizzled_path),pnglittle_swizzled_path],stdout = DEVNULL)
+                little_dds = DDS(ddslittle_swizzled_path)
+                self.data += little_dds.data
+                os.remove(pnglittle_swizzled_path)
+                os.remove(ddslittle_swizzled_path)
+            for i in range(self.mipmap_count):
+                self.mipmap_header_list[i].data_size = data_size // (4**i)
+                self.mipmap_header_list[i].effective_data_size = data_size // (4**i)
+                if i > 0:
+                    self.mipmap_header_list[i].data_offset = self.mipmap_header_list[i-1].data_offset + self.mipmap_header_list[i-1].effective_data_size
+            os.remove(dds_swizzled_path)
+        elif self.format == 'RGBA8888_UNORM': #no support of RGBA images with mipmaps, as they are not a thing in AJT
+            im = Image.open(png_swizzled_path)
+            rgba = list(im.getdata())
+            new_data = bytearray()
+            for pix in rgba:
+                for value in pix:
+                    new_data += value.to_bytes(1)
+            self.data = new_data
+        os.remove(png_swizzled_path)
 
     def import_png_steam(self,png_path,patch_root_dir):
-        gamepath = os.path.join(self.filepath.replace(patch_root_dir + '\\',''))
+        gamepath = os.path.join(self.filepath.replace(os.path.join(patch_root_dir,''),''))
         if self.format in ['BC1_UNORM','BC7_UNORM']: #converting to DDS by calling texconv
             dds_path = png_path[:-3] + 'dds'
-            check_call(['texconv','-ft','dds','-y','-srgb','-f',self.format,'-m',self.mipmap_count,'-o',os.path.dirname(png_path),png_path],stdout = DEVNULL)
+            check_call(['texconv','-ft','dds','-y','-srgb','-f',self.format,'-m',str(self.mipmap_count),'-o',os.path.dirname(png_path),png_path],stdout = DEVNULL)
             ddsf = DDS(dds_path)
             self.data = ddsf.data
             os.remove(dds_path)
@@ -244,45 +255,54 @@ class SwitchMipmapHeader:
     def tobytes(self):
         return self.data_offset.to_bytes(4,'little') + self.padding.to_bytes(4,'little') + self.data_size.to_bytes(4,'little') + self.effective_data_size.to_bytes(4,'little')
 
-def batch_tex_to_png(extracted_root_dir,platform,ext):
-    print('\n\n--- EXPORTING TEXTURES ---\n\n')
-    if ext in ['en','fr','de']:
+def islocalizedtex(path,ext):
+    if ext in ['en','fr','de']: #literally useful for one file... Yeah
         region = 'europe'
     else:
         region = 'asia'
+    file, dir = os.path.basename(path), os.path.dirname(path)
+    if (f'.tex.719230324.{ext}' in file) or (f'_{ext}_' in file and '.tex.719230324' in file) or ((region in file) and '.tex.719230324' in file):
+        return True
+    elif file.endswith('.tex.719230324'):
+        if not os.path.isfile(path + f'.{ext}'):
+            for lang_ext in ['ja','en','de','fr','ko','zhcn','zhtw']:
+                if os.path.isfile(path + f'.{lang_ext}'):
+                    return True
+            return False
+    else:
+        return False
+
+
+
+def batch_tex_to_png(extracted_root_dir,platform,ext):
+    print('\n\n--- EXPORTING TEXTURES ---\n\n')
     if platform == 'Steam':
         plat_code = 'stm'
     elif platform == 'Switch':
         plat_code = 'nsw'
-    else:
-        return
     root = os.path.join(extracted_root_dir,'natives',plat_code)
     for path, subdirs,files in os.walk(root):
         for file in files:
             truepath = os.path.join(path,file)
-            if (f'.tex.719230324.{ext}' in file) or (f'_{ext}_' in file and '.tex.719230324' in file) or ((region in file) and '.tex.719230324' in file):
+            if islocalizedtex(truepath,ext):
                 try:
                     os.makedirs(path.replace(root,'png'))
                 except:
                     pass
-               # try:
-                print(f'Exporting {truepath}...')
-                tex = AJTTex(truepath,platform)
-                if tex.format != 'RGBA8888_UNORM':
-                    tex.convert_BC_to_png(path.replace(root,'png'))
-                    fix_png = Image.open(os.path.join(path.replace(root,'png'),file.split('.')[0] + '.png'))
-                    fix_png.save(os.path.join(path.replace(root,'png'),file.split('.')[0] + '.png')) #fixing some strange png export from texconv
-                else:
-                    tex.convert_RGBA_to_png(path.replace(root,'png'))
-               # except:
-                #    print(f'An error occured while exporting {truepath}')
+                try:
+                    print(f'Exporting {truepath}...')
+                    tex = AJTTex(truepath,platform)
+                    if tex.format != 'RGBA8888_UNORM':
+                        tex.convert_BC_to_png(path.replace(root,'png'))
+                        fix_png = Image.open(os.path.join(path.replace(root,'png'),file + '.png'))
+                        fix_png.save(os.path.join(path.replace(root,'png'),file + '.png')) #fixing texconv exporting pngs that are shown lighter by some softwares, for some reason
+                    else:
+                        tex.convert_RGBA_to_png(path.replace(root,'png'))
+                except:
+                    print(f'An error occured while exporting {truepath}')
 
 
 def batch_import_png_switch(extracted_root_dir,patch_root_dir,ext):
-    if ext in ['en','fr','de']:
-        region = 'europe'
-    else:
-        region = 'asia'
     for path, _, files in os.walk('png'):
         for file in files:
             truepath = os.path.join(path,file)
@@ -290,38 +310,28 @@ def batch_import_png_switch(extracted_root_dir,patch_root_dir,ext):
                 os.remove(truepath)
             elif file.endswith('.png'):
                 print(f'Importing {truepath}...')
-                if f'_{ext}_' in file or region in file or file == 'event4_11_0_iml3.png':
-                    texpath = os.path.join(patch_root_dir,'natives','nsw',truepath.replace('png' + '\\','').replace('.png','.tex.719230324'))
-                else:
-                    texpath = os.path.join(patch_root_dir,'natives','nsw',truepath.replace('png' + '\\','').replace('.png',f'.tex.719230324.{ext}'))
+                texpath = os.path.join(patch_root_dir,'natives','nsw',truepath[:-4].replace(os.path.join('png',''),''))
                 if not os.path.isfile(texpath):
                     if not os.path.isdir(os.path.dirname(texpath)):
                         os.makedirs(os.path.dirname(texpath))
                     shutil.copy(texpath.replace(patch_root_dir,extracted_root_dir),texpath)
-                try:
-                    tex = AJTTex(texpath,'Switch')
-                    tex.import_png_switch(truepath,patch_root_dir)
-                    tex.update()
-                except:
-                    print(f'Error while importing {truepath}')
+             #   try:
+                tex = AJTTex(texpath,'Switch')
+                tex.import_png_switch(truepath,patch_root_dir)
+                tex.update()
+                #except:
+                 #   print(f'Error while importing {truepath}')
 
 def batch_import_png_steam(extracted_root_dir,patch_root_dir,ext):
-    if ext in ['en','fr','de']:
-        region = 'europe'
-    else:
-        region = 'asia'
     for path, _, files in os.walk('png'):
         for file in files:
             truepath = os.path.join(path,file)
-            if '_sizzled' in file or '.little' in file:
+            if '_swizzled' in file or '.little' in file:
                 os.remove(truepath)
                 continue
             elif file.endswith('.png'):
                 print(f'Importing {truepath}...')
-                if f'_{ext}_' in file or region in file or file == 'event4_11_0_iml3.png':
-                    texpath = os.path.join(patch_root_dir,'natives','stm',truepath.replace('png' + '\\','').replace('.png','.tex.719230324'))
-                else:
-                    texpath = os.path.join(patch_root_dir,'natives','stm',truepath.replace('png' + '\\','').replace('.png',f'.tex.719230324.{ext}'))
+                texpath = os.path.join(patch_root_dir,'natives','stm',truepath[:-4].replace(os.path.join('png',''),''))
                 if not os.path.isfile(texpath):
                     if not os.path.isdir(os.path.dirname(texpath)):
                         os.makedirs(os.path.dirname(texpath))
