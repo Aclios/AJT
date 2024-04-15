@@ -36,8 +36,8 @@ class SRCDFile:
                 raise Exception('Unknown header size flag')
             self.data = f.read()
 
-    def write(self,filepath):
-        with open(filepath,mode='wb') as f:
+    def update(self):
+        with open(self.filepath,mode='wb') as f:
             f.write(self.magic + self.unk1 + self.audio_filesize.to_bytes(4,'little') + self.audio_file_format + self.unk2 + self.filename_hash + self.channel_nbr.to_bytes(4,'little') + self.unk3 + self.unk_rate.to_bytes(4,'little') + self.samplerate.to_bytes(4,'little')+self.bits_per_sample.to_bytes(2,'little') + self.unk4 + self.unk5 + self.flag + self.unk6 + self.data)
 
     def import_audio(self,audio_filepath):
@@ -79,7 +79,7 @@ def batch_export_srcd(extracted_root_dir,platform,ext):
     for path, subdirs,files in os.walk(root):
         for file in files:
             truepath = os.path.join(path,file)
-            if (f'.asrc.31.{ext}' in file):
+            if (ext in ['zhcn','zhtw'] and os.path.isfile(f'{truepath}.ja')) or (f'.asrc.31.{ext}' in file): #chinese sounds don't have any extension, since they are the same for zhcn and zhtw
                 try:
                     os.makedirs(path.replace(root,'sound'))
                 except:
@@ -88,10 +88,10 @@ def batch_export_srcd(extracted_root_dir,platform,ext):
                     print(f"Exporting {truepath}...")
                     snd = SRCDFile(truepath,platform)
                     if platform == 'Steam':
-                        with open(os.path.join(path.replace(root,'sound'),file.split('.')[0] + '.wav'),'wb') as f:
+                        with open(os.path.join(truepath.replace(root,'sound') + '.wav'),'wb') as f:
                             f.write(snd.data)
                     elif platform == 'Switch':
-                        with open(os.path.join(path.replace(root,'sound'),file.split('.')[0] + '.ogg'),'wb') as f:
+                        with open(os.path.join(truepath.replace(root,'sound') + '.ogg'),'wb') as f:
                             f.write(snd.data)
                 except:
                     pass
@@ -106,11 +106,11 @@ def batch_import_srcd(extracted_root_dir,patch_root_dir,platform,ext):
             truepath = os.path.join(path,file)
             if file.endswith('.wav') or file.endswith('.ogg'):
                 print(f'Importing {truepath}...')
-                asrc_path = os.path.join(patch_root_dir,'natives',plat_code,'streaming',truepath.replace('.wav',f'.asrc.31.{ext}').replace('.ogg',f'.asrc.31.{ext}'))
+                asrc_path = os.path.join(patch_root_dir,'natives',plat_code,'streaming',truepath.replace('.wav','').replace('.ogg',''))
                 if not os.path.isfile(asrc_path):
                     if not os.path.isdir(os.path.dirname(asrc_path)):
                         os.makedirs(os.path.dirname(asrc_path))
                     shutil.copy(asrc_path.replace(patch_root_dir,extracted_root_dir),asrc_path)
                 asrc = SRCDFile(asrc_path,platform)
                 asrc.import_audio(truepath)
-                asrc.write(asrc_path)
+                asrc.update()
