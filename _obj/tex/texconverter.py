@@ -315,12 +315,12 @@ def batch_import_png_switch(extracted_root_dir,patch_root_dir,ext):
                     if not os.path.isdir(os.path.dirname(texpath)):
                         os.makedirs(os.path.dirname(texpath))
                     shutil.copy(texpath.replace(patch_root_dir,extracted_root_dir),texpath)
-             #   try:
-                tex = AJTTex(texpath,'Switch')
-                tex.import_png_switch(truepath,patch_root_dir)
-                tex.update()
-                #except:
-                 #   print(f'Error while importing {truepath}')
+                try:
+                    tex = AJTTex(texpath,'Switch')
+                    tex.import_png_switch(truepath,patch_root_dir)
+                    tex.update()
+                except:
+                    print(f'Error while importing {truepath}')
 
 def batch_import_png_steam(extracted_root_dir,patch_root_dir,ext):
     for path, _, files in os.walk('png'):
