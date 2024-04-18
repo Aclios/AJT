@@ -274,12 +274,12 @@ def islocalizedtex(path,ext):
 
 
 
-def batch_tex_to_png(extracted_root_dir,platform,ext):
+def batch_export_tex(PLATFORM):
     print('\n\n--- EXPORTING TEXTURES ---\n\n')
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
+    extracted_root_dir = PLATFORM.pak_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     root = os.path.join(extracted_root_dir,'natives',plat_code)
     for path, subdirs,files in os.walk(root):
         for file in files:
@@ -301,28 +301,12 @@ def batch_tex_to_png(extracted_root_dir,platform,ext):
                 except:
                     print(f'An error occured while exporting {truepath}')
 
-
-def batch_import_png_switch(extracted_root_dir,patch_root_dir,ext):
-    for path, _, files in os.walk('png'):
-        for file in files:
-            truepath = os.path.join(path,file)
-            if '_swizzled' in file or '.little' in file:
-                os.remove(truepath)
-            elif file.endswith('.png'):
-                print(f'Importing {truepath}...')
-                texpath = os.path.join(patch_root_dir,'natives','nsw',truepath[:-4].replace(os.path.join('png',''),''))
-                if not os.path.isfile(texpath):
-                    if not os.path.isdir(os.path.dirname(texpath)):
-                        os.makedirs(os.path.dirname(texpath))
-                    shutil.copy(texpath.replace(patch_root_dir,extracted_root_dir),texpath)
-                try:
-                    tex = AJTTex(texpath,'Switch')
-                    tex.import_png_switch(truepath,patch_root_dir)
-                    tex.update()
-                except:
-                    print(f'Error while importing {truepath}')
-
-def batch_import_png_steam(extracted_root_dir,patch_root_dir,ext):
+def batch_import_tex(PLATFORM):
+    extracted_root_dir = PLATFORM.pak_path
+    patch_root_dir = PLATFORM.patch_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     for path, _, files in os.walk('png'):
         for file in files:
             truepath = os.path.join(path,file)
@@ -331,13 +315,13 @@ def batch_import_png_steam(extracted_root_dir,patch_root_dir,ext):
                 continue
             elif file.endswith('.png'):
                 print(f'Importing {truepath}...')
-                texpath = os.path.join(patch_root_dir,'natives','stm',truepath[:-4].replace(os.path.join('png',''),''))
+                texpath = os.path.join(patch_root_dir,'natives',plat_code,truepath[:-4].replace(os.path.join('png',''),''))
                 if not os.path.isfile(texpath):
                     if not os.path.isdir(os.path.dirname(texpath)):
                         os.makedirs(os.path.dirname(texpath))
                     shutil.copy(texpath.replace(patch_root_dir,extracted_root_dir),texpath)
                 try:
-                    tex = AJTTex(texpath,'Steam')
+                    tex = AJTTex(texpath,platform)
                     tex.import_png_steam(truepath,patch_root_dir)
                     tex.update()
                 except:

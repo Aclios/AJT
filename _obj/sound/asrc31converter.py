@@ -7,7 +7,7 @@ import shutil
 sound_bit_dict = {"PCM_16":16,"PCM_U8":8,"PCM_24":24,"PCM_32":32,"VORBIS":16,"OPUS":16}
 sound_format_dict = {"WAV":b"wav ","OGG":b"ogg "}
 
-class SRCDFile:
+class ASRCFile:
     def __init__(self,filepath,platform):
         self.filepath = filepath
         with open(filepath,mode='rb') as f:
@@ -69,12 +69,12 @@ def get_audio_file_data(audio_filepath):
         with sf.SoundFile(audio_filepath,'r') as f:
             return f.format,f.channels,f.samplerate,f.subtype,data
 
-def batch_export_srcd(extracted_root_dir,platform,ext):
+def batch_export_srcd(PLATFORM):
     print('\n\n--- EXPORTING SOUND FILES ---\n\n')
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
+    extracted_root_dir = PLATFORM.pak_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     root = os.path.join(extracted_root_dir,'natives',plat_code,'streaming','sound')
     for path, subdirs,files in os.walk(root):
         for file in files:
@@ -86,7 +86,7 @@ def batch_export_srcd(extracted_root_dir,platform,ext):
                     pass
                 try:
                     print(f"Exporting {truepath}...")
-                    snd = SRCDFile(truepath,platform)
+                    snd = ASRCFile(truepath,platform)
                     if platform == 'Steam':
                         with open(os.path.join(truepath.replace(root,'sound') + '.wav'),'wb') as f:
                             f.write(snd.data)
@@ -96,11 +96,12 @@ def batch_export_srcd(extracted_root_dir,platform,ext):
                 except:
                     pass
 
-def batch_import_srcd(extracted_root_dir,patch_root_dir,platform,ext):
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
+def batch_import_srcd(PLATFORM):
+    extracted_root_dir = PLATFORM.pak_path
+    patch_root_dir = PLATFORM.patch_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     for path, _, files in os.walk('sound'):
         for file in files:
             truepath = os.path.join(path,file)
@@ -111,6 +112,6 @@ def batch_import_srcd(extracted_root_dir,patch_root_dir,platform,ext):
                     if not os.path.isdir(os.path.dirname(asrc_path)):
                         os.makedirs(os.path.dirname(asrc_path))
                     shutil.copy(asrc_path.replace(patch_root_dir,extracted_root_dir),asrc_path)
-                asrc = SRCDFile(asrc_path,platform)
+                asrc = ASRCFile(asrc_path,platform)
                 asrc.import_audio(truepath)
                 asrc.update()

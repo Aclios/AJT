@@ -5,12 +5,12 @@ from subprocess import DEVNULL, STDOUT, check_call
 msg2_dir_names = ['common','gs4','gs5','gs6','museum']
 
 
-def batch_export_msg2(extracted_root_dir,platform,ext):
+def batch_export_msg2(PLATFORM):
+    extracted_root_dir = PLATFORM.pak_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     print('\n\n--- EXPORTING MSG.22 FILES ---\n\n')
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
     msg_root_dir = os.path.join(extracted_root_dir,'natives',plat_code,'gamedesign','text')
     for dir in msg2_dir_names:
         try:
@@ -28,11 +28,12 @@ def batch_export_msg2(extracted_root_dir,platform,ext):
                     print(f"Can't export to {os.path.join('msg',dir,file)}, file already exists")
 
 
-def batch_import_msg2(extracted_root_dir,patch_root_dir,platform,ext):
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
+def batch_import_msg2(PLATFORM):
+    extracted_root_dir = PLATFORM.pak_path
+    patch_root_dir = PLATFORM.patch_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     msg_root_dir = os.path.join(extracted_root_dir,'natives',plat_code,'gamedesign','text')
     patched_msg_root_dir = os.path.join(patch_root_dir,'natives',plat_code,'gamedesign','text')
     for dir in msg2_dir_names:

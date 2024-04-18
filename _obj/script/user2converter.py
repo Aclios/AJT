@@ -1,11 +1,14 @@
 import os
 import shutil
+from _obj.script.user2aa4converter import *
+
 
 def readint32(f):
     return int.from_bytes(f.read(4),'little')
 
 def readutf16(f):
     return f.read(2).decode('utf-16')
+
 
 class User2Header:
     def __init__(self,first_header,unk1,topic_count,unk2,rsz_header_size,unk3,unk4,unk5):
@@ -165,12 +168,15 @@ class User2File:
                 f.write(newstring.encode())
                 f.write(b'\n\n')
 
-def batch_export_user2(extracted_root_dir,platform,ext):
-    print('\n\n--- EXPORTING SCRIPT FILES ---\n\n')
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
+
+
+
+def batch_export_user2_AA56(PLATFORM):
+    extracted_root_dir = PLATFORM.pak_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
+    #print('\n\n--- EXPORTING SCRIPT FILES ---\n\n')
     for dir in ['gs5','gs6']:
         user2_dir = os.path.join(extracted_root_dir,'natives',plat_code,'gamedesign',dir,'scriptdata')
         for file in os.listdir(user2_dir):
@@ -186,14 +192,13 @@ def batch_export_user2(extracted_root_dir,platform,ext):
             user2 = User2File(truepath)
             user2.write_txt(output_path)
 
-
-def batch_import_user2(patch_dir,platform,ext):
-    if platform == 'Steam':
-        plat_code = 'stm'
-    elif platform == 'Switch':
-        plat_code = 'nsw'
+def batch_import_user2_AA56(PLATFORM):
+    patch_root_dir = PLATFORM.patch_path
+    platform = PLATFORM.name
+    plat_code = PLATFORM.code
+    ext = PLATFORM.ext
     for dir in ['gs5','gs6']:
-        user2_dir = os.path.join(patch_dir,'natives',plat_code,'gamedesign',dir,'scriptdata')
+        user2_dir = os.path.join(patch_root_dir,'natives',plat_code,'gamedesign',dir,'scriptdata')
         try:
             os.makedirs(user2_dir)
         except:
@@ -205,5 +210,15 @@ def batch_import_user2(patch_dir,platform,ext):
             print(f'Converting {file}...')
             usr = User2File(os.path.join(txt_dir,file))
             usr.write_user2(os.path.join(user2_dir, file[:-4]))
+
+
+def batch_export_user2(PLATFORM):
+    batch_export_user2_AA4(PLATFORM)
+    batch_export_user2_AA56(PLATFORM)
+
+
+def batch_import_user2(PLATFORM):
+    batch_import_user2_AA4(PLATFORM)
+    batch_import_user2_AA56(PLATFORM)
 
 
