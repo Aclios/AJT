@@ -63,7 +63,7 @@ class User2File:
                     if byte == b'{':
                         if not first_topic:
                             new_topic_data = topic_data.replace(b'<b>',b'\x0d\x0a').decode()
-                            self.topic_list.append(User2Topic(len(topic_name)+1,topic_name.decode(),len(new_topic_data)+1,new_topic_data))
+                            self.topic_list.append(User2Topic(len(topic_name.decode())+1,topic_name.decode(),len(new_topic_data)+1,new_topic_data))
                             topic_name = bytearray()
                             topic_data = bytearray()
                         else:
@@ -79,7 +79,7 @@ class User2File:
                         topic_data += byte
                         byte = f.read(1)
                 topic_data = topic_data.replace(b'<b>',b'\x0d\x0a').decode()
-                self.topic_list.append(User2Topic(len(topic_name)+1,topic_name.decode(),len(topic_data)+1,topic_data))
+                self.topic_list.append(User2Topic(len(topic_name.decode())+1,topic_name.decode(),len(topic_data)+1,topic_data))
                 self.header = User2Header(b'USR' + bytes(13) + b'\x30' + bytes(7) + b'\x30' + bytes(7) + b'\x30' + bytes(15),b'\x10' + bytes(3) + b'\x01'+bytes(3),len(self.topic_list),bytes(8) + b'\x34'+bytes(7),0x40 + 0x10 * (len(self.topic_list)//2 + 1),bytes(4),bytes(4),bytes(8))
 
 
