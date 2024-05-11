@@ -33,6 +33,8 @@ Finally, fill the path_init.txt file:
 
 "extension" is the game extension of the files you want to extract, so one of the following: "ja","fr","en","de","ko","zhcn","zhtw". The tools will only extract the files that are exclusive to this language, and the patch will replace the files of this language. It is heavily advised to chose the langage you want to translate from, since the extracted scripts will be of this language.
 
+You can also use the "all" extension to export all the supported files of the game.
+
 "steam_mod_dir" and "switch_mod_dir" are the folders where you want your patch pak files to be written. For Steam, it's by default the Steam directory of the game and there is no real reason to change it, for Switch you can put the mod/{game id}/romfs of an emulator.
 
 # How does it work ?
