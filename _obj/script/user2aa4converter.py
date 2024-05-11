@@ -149,7 +149,7 @@ def batch_export_user2_AA4(PLATFORM):
     print('\n\n--- EXPORTING SCRIPT FILES ---\n\n')
     user2_dir = os.path.join(extracted_root_dir,'natives',plat_code,'gamedesign','gs4','scriptbinary')
     for file in os.listdir(user2_dir):
-        if not file.endswith(f'.{ext}'):
+        if not file.endswith(f'.{ext}') and ext != 'all':
             continue
         truepath = os.path.join(user2_dir,file)
         try:

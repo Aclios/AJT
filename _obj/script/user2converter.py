@@ -180,7 +180,7 @@ def batch_export_user2_AA56(PLATFORM):
     for dir in ['gs5','gs6']:
         user2_dir = os.path.join(extracted_root_dir,'natives',plat_code,'gamedesign',dir,'scriptdata')
         for file in os.listdir(user2_dir):
-            if not file.endswith(f'.{ext}'):
+            if not file.endswith(f'.{ext}') and ext != 'all':
                 continue
             truepath = os.path.join(user2_dir,file)
             try:

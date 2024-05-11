@@ -19,7 +19,10 @@ def batch_export_msg2(PLATFORM):
             pass
         msg2_dir = os.path.join(msg_root_dir,dir)
         print(f'Exporting directory {msg2_dir}...')
-        check_call(['REMSG_Converter','-i',msg2_dir,'-m','txt','-l',ext],stdout = DEVNULL)
+        if ext == 'all':
+            check_call(['REMSG_Converter','-i',msg2_dir,'-m','csv'],stdout = DEVNULL)
+        else:
+            check_call(['REMSG_Converter','-i',msg2_dir,'-m','txt','-l',ext],stdout = DEVNULL)
         for file in os.listdir(msg2_dir):
             if file.endswith('txt'):
                 try:

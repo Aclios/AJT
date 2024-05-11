@@ -79,7 +79,7 @@ def batch_export_srcd(PLATFORM):
     for path, subdirs,files in os.walk(root):
         for file in files:
             truepath = os.path.join(path,file)
-            if (ext in ['zhcn','zhtw'] and os.path.isfile(f'{truepath}.ja')) or (f'.asrc.31.{ext}' in file): #chinese sounds don't have any extension, since they are the same for zhcn and zhtw
+            if (ext in ['zhcn','zhtw'] and os.path.isfile(f'{truepath}.ja')) or (f'.asrc.31.{ext}' in file) or ('asrc.31' in file and ext == 'all'): #chinese sounds don't have any extension, since they are the same for zhcn and zhtw
                 try:
                     os.makedirs(path.replace(root,'sound'))
                 except:

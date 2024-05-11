@@ -63,8 +63,6 @@ class AJTTex:
             if self.magic != b'TEX\x00':
                 raise Exception("Error: the file isn't a valid TEX file (bad magic)")
             self.version = readint32(f)
-            if self.version != 719230324:
-                raise Exception("Error: TEX version is not correct")
             self.width = readint16(f)
             self.height = readint16(f)
             self.unknown = f.read(2) #always \x01\x00 (?)
@@ -256,6 +254,8 @@ class SwitchMipmapHeader:
         return self.data_offset.to_bytes(4,'little') + self.padding.to_bytes(4,'little') + self.data_size.to_bytes(4,'little') + self.effective_data_size.to_bytes(4,'little')
 
 def islocalizedtex(path,ext):
+    if ext == 'all' and ".tex.719230324":
+        return True
     if ext in ['en','fr','de']: #literally useful for one file... Yeah
         region = 'europe'
     else:
