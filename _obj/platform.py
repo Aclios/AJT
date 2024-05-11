@@ -11,8 +11,8 @@ with open('path_init.txt','rb') as f:
 
 STEAM_PAK_PATH, SWITCH_PAK_PATH, STEAM_PATCH_PATH, SWITCH_PATCH_PATH, EXTENSION, STEAM_MOD_DIR, SWITCH_MOD_DIR = temp
 
-if EXTENSION not in ['ja','fr','en','de','ko','zhcn','zhtw']:
-    raise Exception("Extension must have one of the following values: ['ja','fr','en','de','ko','zhcn','zhtw']")
+if EXTENSION not in ['ja','fr','en','de','ko','zhcn','zhtw','all']:
+    raise Exception("Extension must have one of the following values: ['ja','fr','en','de','ko','zhcn','zhtw','all']")
 
 class Steam:
     name = 'Steam'
