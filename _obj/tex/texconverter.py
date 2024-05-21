@@ -28,7 +28,7 @@ def readint16(file):
     return int.from_bytes(file.read(2),'little')
 
 def readint8(file):
-    return int.from_bytes(file.read(1))
+    return int.from_bytes(file.read(1),'little')
 
 def writeint32(file,value):
     file.write(value.to_bytes(4,'little'))
