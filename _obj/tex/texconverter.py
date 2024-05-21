@@ -254,13 +254,13 @@ class SwitchMipmapHeader:
         return self.data_offset.to_bytes(4,'little') + self.padding.to_bytes(4,'little') + self.data_size.to_bytes(4,'little') + self.effective_data_size.to_bytes(4,'little')
 
 def islocalizedtex(path,ext):
-    if ext == 'all' and ".tex.719230324" in file:
+    file, dir = os.path.basename(path), os.path.dirname(path)
+    if ext == 'all' and ".tex.719230324" in path:
         return True
     if ext in ['en','fr','de']: #literally useful for one file... Yeah
         region = 'europe'
     else:
         region = 'asia'
-    file, dir = os.path.basename(path), os.path.dirname(path)
     if (f'.tex.719230324.{ext}' in file) or (f'_{ext}_' in file and '.tex.719230324' in file) or ((region in file) and '.tex.719230324' in file):
         return True
     elif file.endswith('.tex.719230324'):
