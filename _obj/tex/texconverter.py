@@ -13,7 +13,8 @@ tex_format_dict = {
 0x53:"BC5_UNORM",
 0x62:"BC7_UNORM",
 0x63:"BC7_UNORM_SRGB",
-0x1c:"RGBA8888_UNORM"
+0x1c:"RGBA8888_UNORM",
+0x040e:"RGBA8888_UNORM"
 }
 
 bits_per_pixel_dict = {
@@ -322,7 +323,10 @@ def batch_import_tex(PLATFORM):
                     shutil.copy(texpath.replace(patch_root_dir,extracted_root_dir),texpath)
                 try:
                     tex = AJTTex(texpath,platform)
-                    tex.import_png_steam(truepath,patch_root_dir)
+                    if platform == 'Steam':
+                        tex.import_png_steam(truepath,patch_root_dir)
+                    elif platform == 'Switch':
+                        tex.import_png_switch(truepath,patch_root_dir)
                     tex.update()
                 except:
                     print(f'Error while importing {truepath}')

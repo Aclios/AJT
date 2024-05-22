@@ -114,7 +114,6 @@ class ImageSwizzle:
         self.im = expanded_im
         self.x = 0
         self.y = 0
-        print(self.width,self.height)
 
     def swizzle_tile(self,L):
         tile_list = [self.im]
