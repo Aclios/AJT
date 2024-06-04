@@ -1,37 +1,22 @@
-#very unefficient way to swizzle/unswizzle textures, but it was easier to do since it's a more visual approch, and at least it works
+#very unefficient way to swizzle/unswizzle textures
 
 from PIL import Image
-
-#it should be totally possible to deduct these list from format data (BC or not?; number of bits per pixel, etc.)
-
-unswizzle_dict = {
-"BC7_UNORM":[(4,4),[[8,8,True],[16,32,True],[16,512,True]]],
-"BC1_UNORM":[(4,4),[[8,8,False],[16,32,False],[32,512,False]]],
-"RGBA8888_UNORM":[(1,1),[[4,2,False],[8,2,False],[8,8,False],[16,8,False],[16,128,False]]]
-}
-
-swizzle_dict = {
-"BC7_UNORM":[[16,512,False],[16,32,True],[8,8,True],[4,4,True]],
-"BC1_UNORM":[[32,512,False],[16,32,False],[8,8,False],[4,4,False]],
-"RGBA8888_UNORM":[[16,128,False],[16,8,False],[8,8,False],[8,2,False],[4,2,False],[1,1,False]]
-}
+import copy
 
 
-class ImageDeswizzle:
-    def __init__(self,im,format):
+class NswImageDeswizzle:
+    def __init__(self,im,format,swizzle_mode):
         self.im = im
         self.width = self.im.size[0]
         self.height = self.im.size[1]
+        self.format = format
         self.x = 0
         self.y = 0
-        self.format = format
-        self.block, self.coord_L = unswizzle_dict[format].copy()
-        if self.format in ["BC7_UNORM","BC1_UNORM"]:
-            if self.height <= 256:
-                self.coord_L[-1][1] = 256
-                self.height = 256
-            else:
-                self.coord_L[-1][1] = 512
+        self.block = format.block_size
+        self.coord_L = copy.deepcopy(format.nsw_unswizzle_list)
+        if self.coord_L == None:
+            raise Exception(f'Error: unimplemented Switch Swizzle for the format {format.name}')
+        self.coord_L[-1][1] = self.coord_L[-1][1] * (2 ** swizzle_mode)
 
 
     def get_next_block(self):
@@ -46,7 +31,7 @@ class ImageDeswizzle:
         tile_size = L[-1][0] * L[-1][1]
         block_count = tile_size // (self.block[0] * self.block[1])
         tile_list = []
-        current_size = (self.block[0],self.block[1])
+        current_size = self.block
         for _ in range(block_count):
             tile_list.append(self.get_next_block())
         for tiling_data in L:
@@ -70,8 +55,6 @@ class ImageDeswizzle:
                 new_tile_list.append(newtile)
             tile_list = new_tile_list
             current_size = (width,height)
-        if len(tile_list) != 1:
-            print(len(tile_list))
         return tile_list[0]
 
     def deswizzle(self,final_width,final_height):
@@ -86,32 +69,23 @@ class ImageDeswizzle:
         return new_im
 
 
-class ImageSwizzle:
-    def __init__(self,im,format):
-        self.coord_L = swizzle_dict[format].copy()
-        self.im = im
+class NswImageSwizzle:
+    def __init__(self,im,format,swizzle_mode):
+        self.coord_L = copy.deepcopy(format.nsw_swizzle_list)
+        if self.coord_L == None:
+            raise Exception(f'Error: unimplemented Switch Swizzle for the format {format.name}')
+        self.coord_L[0][1] = self.coord_L[0][1] * (2 ** swizzle_mode)
         self.format = format
-        self.width = self.im.size[0]
-        self.height = self.im.size[1]
+        self.width = im.size[0]
+        self.height = im.size[1]
         max_width_tile = self.coord_L[0][0]
         max_height_tile = self.coord_L[0][1]
-        if self.format in ["BC7_UNORM","BC1_UNORM"]: #swizzling is different if the file is too small in height. The max tile height can be reduce to 256, 128, 64, etc.
-            for pow in range(9):
-                if self.height <= 2**(pow + 1) and self.height > 2**pow:
-                    self.coord_L[0][1] = 2**(pow+1)
-                    self.height = 2**(pow+1)
-                    break
-        if self.height % max_height_tile != 0 and self.height >= max_height_tile:
-            self.height = ((self.height // max_height_tile) + 1) * max_height_tile
         if self.width % max_width_tile != 0:
             self.width = ((self.width // max_width_tile) + 1) * max_width_tile
-
-        if self.format in ["BC7_UNORM","RGBA8888_UNORM"]: #rewriting an image with the right dimensions so it can be swizzled (for BC1, width must be a multiple of 32 and height a multiple of 512 or equal to 256, 128, ..., for example)
-            expanded_im = Image.new('RGBA',(self.width,self.height))
-        elif self.format in ["BC1_UNORM"]:
-            expanded_im = Image.new('RGB',(self.width,self.height))
-        expanded_im.paste(self.im,(0,0))
-        self.im = expanded_im
+        if self.height % max_height_tile != 0:
+            self.height = ((self.height // max_height_tile) + 1) * max_height_tile
+        self.im = Image.new('RGBA',(self.width,self.height))
+        self.im.paste(im,(0,0))
         self.x = 0
         self.y = 0
 
@@ -138,10 +112,7 @@ class ImageSwizzle:
 
 
     def swizzle(self):
-        if self.format in ["BC7_UNORM","RGBA8888_UNORM"]:
-            new_im = Image.new('RGBA',(self.width,self.height))
-        elif self.format in ["BC1_UNORM"]:
-            new_im = Image.new('RGB',(self.width,self.height))
+        new_im = Image.new('RGBA',(self.width,self.height))
         idx = 0
         tile_list = self.swizzle_tile(self.coord_L)
         block_width,block_height = self.coord_L[-1][0], self.coord_L[-1][1]
@@ -149,6 +120,4 @@ class ImageSwizzle:
             for i in range(self.width // block_width):
                 new_im.paste(tile_list[idx],(i*block_width,j*block_height))
                 idx += 1
-        if self.format in ["BC7_UNORM","BC1_UNORM"]:
-            swizzle_dict[self.format][0][1] = 512
         return new_im
