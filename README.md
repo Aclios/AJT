@@ -50,11 +50,13 @@ After the files are imported, a .pak patch file will be created and automaticall
 
 #  Requirements
 
-You need Python 3.10 or above, Pillow (image processing) and soundfile (sound files processing) modules. 
+You need Python 3.10 or above, Pillow (image processing), soundfile (sound files processing) and pyswizzle (textures swizzle) modules. 
 
 <code>python3 -m pip install --upgrade Pillow</code>
 
 <code>python3 -m pip install --upgrade soundfile</code>
+
+<code>python3 -m pip install --upgrade pyswizzle</code>
 
 # Limitations
 
